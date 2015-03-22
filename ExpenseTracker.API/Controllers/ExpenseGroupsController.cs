@@ -13,6 +13,8 @@ namespace ExpenseTracker.API.Controllers
 
     using ExpenseTracker.DTO;
 
+    using Marvin.JsonPatch;
+
     public class ExpenseGroupsController : ApiController
     {
         IExpenseTrackerRepository _repository;
@@ -105,11 +107,66 @@ namespace ExpenseTracker.API.Controllers
                 {
                     return BadRequest();
                 }
+
+                var eg = _expenseGroupFactory.CreateExpenseGroup(expenseGroup);
+
+                var result = _repository.UpdateExpenseGroup(eg);
+
+                if (result.Status == RepositoryActionStatus.Updated)
+                {
+                    var updatedExponseGroup = _expenseGroupFactory.CreateExpenseGroup(result.Entity);
+
+                    return this.Ok(updatedExponseGroup);
+                }
+
+                if (result.Status == RepositoryActionStatus.NotFound)
+                {
+                    return this.NotFound();
+                }
+
+                return this.BadRequest();
             }
             catch (Exception)
             {
-                
-                throw;
+
+                return this.InternalServerError();
+            }
+        }
+
+        [HttpPatch]
+        public IHttpActionResult Patch(int id, [FromBody] JsonPatchDocument<DTO.ExpenseGroup> expenseGroupPatchDocument)
+        {
+            try
+            {
+                if (expenseGroupPatchDocument == null)
+                {
+                    return this.BadRequest();
+                }
+
+                var expenseGroup = _repository.GetExpenseGroup(id);
+                if (expenseGroup == null)
+                {
+                    return this.NotFound();
+                }
+
+                var eg = _expenseGroupFactory.CreateExpenseGroup(expenseGroup);
+
+                expenseGroupPatchDocument.ApplyTo(eg);
+
+                var result = _repository.UpdateExpenseGroup(_expenseGroupFactory.CreateExpenseGroup(eg));
+
+                if (result.Status == RepositoryActionStatus.Updated)
+                {
+                    var patchedExpenseGroup = _expenseGroupFactory.CreateExpenseGroup(result.Entity);
+                    return this.Ok(patchedExpenseGroup);
+                }
+
+                return this.BadRequest();
+
+            }
+            catch (Exception)
+            {
+                return this.InternalServerError();
             }
         }
     }
