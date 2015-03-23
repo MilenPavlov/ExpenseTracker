@@ -10,10 +10,16 @@ using System.Web.Http;
 
 namespace ExpenseTracker.API.Controllers
 {
+    using System.Web.Http.Routing;
+
+    using ExpenseTracker.API.Helpers;
+
+    using Newtonsoft.Json;
+
     [RoutePrefix("api")]
     public class ExpensesController : ApiController
     {
-
+        private const int MaxPageSize = 10;
         IExpenseTrackerRepository _repository;
         ExpenseFactory _expenseFactory = new ExpenseFactory();
 
@@ -162,7 +168,116 @@ namespace ExpenseTracker.API.Controllers
             }
         }
 
+        [Route("expensegroups/{expenseGroupId}/expenses", Name = "ExpensesForGroup")]
+        public IHttpActionResult Get(int expenseGroupId, string sort = "date", int page = 1, int pageSize = MaxPageSize)
+        {
+            try
+            {
+                var expenses = _repository.GetExpenses(expenseGroupId);
 
-         
+                if (expenses == null)
+                {
+                    return this.NotFound();
+                }
+
+                if (pageSize < MaxPageSize)
+                {
+                    pageSize = MaxPageSize;
+                }
+
+                var totalCount = expenses.Count();
+                var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+                var urlHelper = new UrlHelper(Request);
+
+                var prevLink = page > 1
+                                   ? urlHelper.Link(
+                                       "ExpensesForGroup",
+                                       new
+                                           {
+                                               page = page - 1,
+                                               pageSize = pageSize,
+                                               expenseGroupId = expenseGroupId,
+                                               sort = sort
+                                           })
+                                   : "";
+                var nextLink = page < totalPages
+                                   ? urlHelper.Link(
+                                       "ExpensesForGroup",
+                                       new
+                                           {
+                                               page = page + 1,
+                                               pageSize = pageSize,
+                                               expenseGroupId = expenseGroupId,
+                                               sort = sort
+                                           })
+                                   : "";
+
+                var paginationHeader =
+                    new
+                        {
+                            currentPage = page,
+                            pageSize = pageSize,
+                            totalCount = totalCount,
+                            totalPages = totalPages,
+                            previousPageLink = prevLink,
+                            nextPageLnk = nextLink
+                        };
+
+                HttpContext.Current.Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(paginationHeader));
+
+                var expensesResult = expenses
+                    .ApplySort(sort)
+                    .Skip(pageSize * (page -1))
+                    .Take(pageSize)
+                    .ToList().Select(exp => _expenseFactory.CreateExpense(exp));
+
+                return this.Ok(expensesResult);
+            }
+            catch (Exception)
+            {
+                return this.InternalServerError();
+            }        
+        }
+
+        [Route("expensegroups/{expenseGroupId}/expenses/{id}")]
+        [Route("expenses/{id}")]
+        public IHttpActionResult Get(int id, int? expenseGroupId = null)
+        {
+            try
+            {
+                Repository.Entities.Expense expense = null;
+
+                if (expenseGroupId == null)
+                {
+                    expense = _repository.GetExpense(id);
+                }
+                else
+                {
+                    var expensesForGroup = _repository.GetExpenses((int)expenseGroupId);
+
+                    if (expensesForGroup != null)
+                    {
+                        expense = expensesForGroup.FirstOrDefault(x => x.Id == id);
+                    }
+                }
+
+                if (expense != null)
+                {
+                    var returnValue = _expenseFactory.CreateExpense(expense);
+
+                    return this.Ok(returnValue);
+                }
+                else
+                {
+                    return this.NotFound();
+                }
+            }
+            catch (Exception)
+            {
+                return this.InternalServerError();
+            }
+          
+        }
     }
 }
