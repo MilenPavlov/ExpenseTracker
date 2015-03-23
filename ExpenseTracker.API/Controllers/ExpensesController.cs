@@ -169,10 +169,17 @@ namespace ExpenseTracker.API.Controllers
         }
 
         [Route("expensegroups/{expenseGroupId}/expenses", Name = "ExpensesForGroup")]
-        public IHttpActionResult Get(int expenseGroupId, string sort = "date", int page = 1, int pageSize = MaxPageSize)
+        public IHttpActionResult Get(int expenseGroupId, string sort = "date", string fields = null, int page = 1, int pageSize = MaxPageSize)
         {
             try
             {
+                var listOfFields = new List<string>();
+
+                if (fields != null)
+                {
+                    listOfFields = fields.ToLower().Split(',').ToList();
+                }
+
                 var expenses = _repository.GetExpenses(expenseGroupId);
 
                 if (expenses == null)
@@ -198,7 +205,8 @@ namespace ExpenseTracker.API.Controllers
                                                page = page - 1,
                                                pageSize = pageSize,
                                                expenseGroupId = expenseGroupId,
-                                               sort = sort
+                                               sort = sort,
+                                               fields = fields
                                            })
                                    : "";
                 var nextLink = page < totalPages
@@ -209,7 +217,8 @@ namespace ExpenseTracker.API.Controllers
                                                page = page + 1,
                                                pageSize = pageSize,
                                                expenseGroupId = expenseGroupId,
-                                               sort = sort
+                                               sort = sort,
+                                               fields = fields
                                            })
                                    : "";
 
@@ -230,7 +239,7 @@ namespace ExpenseTracker.API.Controllers
                     .ApplySort(sort)
                     .Skip(pageSize * (page -1))
                     .Take(pageSize)
-                    .ToList().Select(exp => _expenseFactory.CreateExpense(exp));
+                    .ToList().Select(exp => _expenseFactory.CreateDataShapedObject(exp, listOfFields));
 
                 return this.Ok(expensesResult);
             }

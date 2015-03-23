@@ -40,10 +40,19 @@ namespace ExpenseTracker.API.Controllers
         }    
 
         [Route("api/expensegroups", Name = "ExpenseGroupList")]
-        public IHttpActionResult Get(string sort = "id", string status = null, string userId = null, int page = 1, int pageSize = MaxPageSize)
+        public IHttpActionResult Get(string sort = "id", string status = null, string userId = null, string fields = null, int page = 1, int pageSize = MaxPageSize)
         {
             try
             {
+                var includeExpenses = false;
+                var listOfFileds = new List<String>();
+                if (fields != null)
+                {
+                    listOfFileds = fields.ToLower().Split(',').ToList();
+                    includeExpenses = listOfFileds.Any(x => x.Contains("expenses"));
+                }
+
+
                 int statusId = -1;
 
                 if (status != null)
@@ -62,16 +71,23 @@ namespace ExpenseTracker.API.Controllers
                     }
                 }
 
-                var expenseGroups =
-                    _repository.GetExpenseGroups()
-                        .ApplySort(sort)
-                        .Where(x => (statusId == -1 || x.ExpenseGroupStatusId == statusId))
-                        .Where(x => (userId == null || x.UserId == userId))
-                        .ToList()
-                        .Select(eg => _expenseGroupFactory.CreateExpenseGroup(eg));
 
-                var enumerable = expenseGroups as ExpenseGroup[] ?? expenseGroups.ToArray();
-                var totalCount = enumerable.Count();
+                IQueryable<Repository.Entities.ExpenseGroup> expenseGroups = null;
+                if (includeExpenses)
+                {
+                    expenseGroups = _repository.GetExpenseGroupsWithExpenses();
+                }
+                else
+                {
+                    expenseGroups = _repository.GetExpenseGroups();
+                }
+
+                expenseGroups = expenseGroups.ApplySort(sort)
+                            .Where(x => (statusId == -1 || x.ExpenseGroupStatusId == statusId))
+                            .Where(x => (userId == null || x.UserId == userId));
+
+
+                var totalCount = expenseGroups.Count();
                 var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
 
                 var urlHelper = new UrlHelper(Request);
@@ -84,7 +100,8 @@ namespace ExpenseTracker.API.Controllers
                                                pageSize = pageSize,
                                                sort = sort,
                                                status = status,
-                                               userid = userId
+                                               userid = userId,
+                                               fields = fields
                                            })
                                    : "";
 
@@ -95,7 +112,8 @@ namespace ExpenseTracker.API.Controllers
                             pageSize = pageSize,
                             sort = sort,
                             status = status,
-                            userId = userId
+                            userId = userId,
+                            fields = fields
                         }) : "";
 
                 var paginationHeader =
@@ -111,11 +129,11 @@ namespace ExpenseTracker.API.Controllers
 
                 HttpContext.Current.Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(paginationHeader));
 
-                return Ok(enumerable
+                return Ok(expenseGroups
                     .Skip(pageSize * (page -1))
                     .Take(pageSize)
                     .ToList()
-                    .Select(x=> _expenseGroupFactory.CreateExpenseGroup(x)));
+                    .Select(x=> _expenseGroupFactory.CreateDataShapedObject(x, listOfFileds)));
 
             }
             catch (Exception)

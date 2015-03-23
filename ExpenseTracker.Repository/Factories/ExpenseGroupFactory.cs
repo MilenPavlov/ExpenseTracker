@@ -47,7 +47,54 @@ namespace ExpenseTracker.Repository.Factories
             };
         }
 
-         
-         
+        public object CreateDataShapedObject(ExpenseGroup expenseGroup, List<string> listOfFields)
+        {
+            return CreateDataShapedObject(CreateExpenseGroup(expenseGroup), listOfFields);
+        }
+
+        public object CreateDataShapedObject(DTO.ExpenseGroup expenseGroup, List<string> listOfFields)
+        {
+            var lstOfFieldsToWorkWith = new List<string>(listOfFields);
+            if (!lstOfFieldsToWorkWith.Any())
+            {
+                return expenseGroup;
+            }
+
+            var lstOfExpenseFileds = lstOfFieldsToWorkWith.Where(x => x.Contains("expenses")).ToList();
+
+            bool returnPartialExpense = lstOfExpenseFileds.Any() && !lstOfExpenseFileds.Contains("expenses");
+
+            if (returnPartialExpense)
+            {
+                lstOfFieldsToWorkWith.RemoveRange(lstOfExpenseFileds);
+                lstOfExpenseFileds = lstOfExpenseFileds.Select(x => x.Substring(x.IndexOf(".") + 1)).ToList();
+            }
+            else
+            {
+                lstOfExpenseFileds.Remove("expenses");
+                lstOfFieldsToWorkWith.RemoveRange(lstOfExpenseFileds);
+            }
+
+            var objectToReturn = new ExpandoObject();
+
+            foreach (var field in lstOfFieldsToWorkWith)
+            {
+                var fieldValue =
+                    expenseGroup.GetType()
+                        .GetProperty(field, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance)
+                        .GetValue(expenseGroup, null);
+
+                ((IDictionary<string, object>)objectToReturn).Add(field, fieldValue);
+            }
+
+            if (returnPartialExpense)
+            {
+                var expenses = expenseGroup.Expenses.Select(expense => this.expenseFactory.CreateDataShapedObject(expense, lstOfExpenseFileds)).ToList();
+
+                ((IDictionary<string, object>)objectToReturn).Add("expenses", expenses);
+            }
+
+            return objectToReturn;
+        }               
     }
 }
