@@ -249,12 +249,19 @@ namespace ExpenseTracker.API.Controllers
             }        
         }
 
-        [Route("expensegroups/{expenseGroupId}/expenses/{id}")]
-        [Route("expenses/{id}")]
-        public IHttpActionResult Get(int id, int? expenseGroupId = null)
+        [VersionedRoute("expensegroups/{expenseGroupId}/expenses/{id}", 1)]
+        [VersionedRoute("expenses/{id}", 1)]
+        public IHttpActionResult Get(int id, int? expenseGroupId = null, string fields = null)
         {
             try
             {
+                var lstOfFields = new List<string>();
+
+                if (fields != null)
+                {
+                    lstOfFields = fields.ToLower().Split(',').ToList();
+                }
+
                 Repository.Entities.Expense expense = null;
 
                 if (expenseGroupId == null)
@@ -265,28 +272,70 @@ namespace ExpenseTracker.API.Controllers
                 {
                     var expensesForGroup = _repository.GetExpenses((int)expenseGroupId);
 
+                    // if the group doesn't exist, we shouldn't try to get the expenses
                     if (expensesForGroup != null)
                     {
-                        expense = expensesForGroup.FirstOrDefault(x => x.Id == id);
+                        expense = expensesForGroup.FirstOrDefault(eg => eg.Id == id);
                     }
                 }
 
-                if (expense != null)
-                {
-                    var returnValue = _expenseFactory.CreateExpense(expense);
-
-                    return this.Ok(returnValue);
-                }
-                else
+                if (expense == null)
                 {
                     return this.NotFound();
                 }
+                var returnValue = this._expenseFactory.CreateDataShapedObject(expense, lstOfFields);
+                return this.Ok(returnValue);
             }
             catch (Exception)
             {
                 return this.InternalServerError();
             }
           
+        }
+
+        [VersionedRoute("expensegroups/{expenseGroupId}/expenses/{id}", 2)]
+        [VersionedRoute("expenses/{id}", 2)]
+        public IHttpActionResult GetV2(int id, int? expenseGroupId = null, string fields = null)
+        {
+            try
+            {
+                var lstOfFields = new List<string>();
+
+                if (fields != null)
+                {
+                    lstOfFields = fields.ToLower().Split(',').ToList();
+                }
+
+                Repository.Entities.Expense expense = null;
+
+                if (expenseGroupId == null)
+                {
+                    expense = _repository.GetExpense(id);
+                }
+                else
+                {
+                    var expensesForGroup = _repository.GetExpenses((int)expenseGroupId);
+
+                    // if the group doesn't exist, we shouldn't try to get the expenses
+                    if (expensesForGroup != null)
+                    {
+                        expense = expensesForGroup.FirstOrDefault(eg => eg.Id == id);
+                    }
+                }
+
+                if (expense == null)
+                {
+                    return this.NotFound();
+                }
+                var returnValue = this._expenseFactory.CreateDataShapedObject(expense, lstOfFields);
+
+                return this.Ok(returnValue);
+            }
+            catch (Exception)
+            {
+                return this.InternalServerError();
+            }
+
         }
     }
 }

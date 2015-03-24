@@ -6,6 +6,8 @@ namespace ExpenseTracker.API
     using System.Net.Http.Headers;
     using System.Text;
 
+    using CacheCow.Server;
+
     public static class WebApiConfig
     {
         public static HttpConfiguration Register()
@@ -28,8 +30,9 @@ namespace ExpenseTracker.API
             config.Formatters.JsonFormatter.SerializerSettings.ContractResolver
                 = new CamelCasePropertyNamesContractResolver();
 
-            return config;
-             
+            config.MessageHandlers.Add(new CachingHandler(config));
+
+            return config;            
         }
     }
 }

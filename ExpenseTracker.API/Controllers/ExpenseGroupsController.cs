@@ -142,18 +142,32 @@ namespace ExpenseTracker.API.Controllers
             }
         }
 
-        public IHttpActionResult Get(int id)
+        public IHttpActionResult Get(int id, string fields = null)
         {
             try
             {
-                var expenseGroup = _repository.GetExpenseGroup(id);
+                bool includeExpenses = false;
+                var lstOfFields = new List<string>();
 
-                if (expenseGroup == null)
+                // we should include expenses when the fields-string contains "expenses"
+                if (fields != null)
                 {
-                    return this.NotFound();
+                    lstOfFields = fields.ToLower().Split(',').ToList();
+                    includeExpenses = lstOfFields.Any(f => f.Contains("expenses"));
                 }
 
-                return Ok(_expenseGroupFactory.CreateExpenseGroup(expenseGroup));
+                Repository.Entities.ExpenseGroup expenseGroup;
+                expenseGroup = includeExpenses ? this._repository.GetExpenseGroupWithExpenses(id) : this._repository.GetExpenseGroup(id);
+
+
+                if (expenseGroup != null)
+                {
+                    return Ok(_expenseGroupFactory.CreateDataShapedObject(expenseGroup, lstOfFields));
+                }
+                else
+                {
+                    return NotFound();
+                }
             }
             catch (Exception)
             {
