@@ -1,0 +1,78 @@
+﻿@model ExpenseTracker.DTO.ExpenseGroup
+
+@{
+    ViewBag.Title = "Details";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Details</h2>
+
+<div>
+    <h4>Expense Group Details</h4>
+    <hr />
+    <dl class="dl-horizontal">
+
+    
+        <dt>
+            Title
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.Title)
+        </dd>
+
+        <dt>
+          Description
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.Description)
+        </dd>
+
+
+    </dl>
+
+
+    <h4>Registered Expenses</h4>
+
+    <p>
+        @Html.ActionLink("Add an expense", "Create", "Expenses", new { expenseGroupId = Model.Id }, null)
+    </p>
+    <table class="table">
+        <tr>
+            <th>
+                Description
+            </th>
+            <th>
+                Date
+            </th>
+            <th>
+                Amount
+            </th>
+            <th></th>
+        </tr>
+
+        @foreach (var item in Model.Expenses)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Description)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Date, "ShortDateTime")
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Amount)
+                </td>
+                <td>
+                    @Html.ActionLink("Edit", "Edit", "Expenses", new { expenseGroupId = item.ExpenseGroupId, id = item.Id }, null) |
+                    @Html.ActionLink("Delete", "Delete", "Expenses", new { expenseGroupId = item.ExpenseGroupId, id = item.Id }, null)
+                </td>
+            </tr>
+        }
+
+    </table>
+</div>
+<p>
+    @Html.ActionLink("Back to List", "Index")
+</p>

@@ -11,6 +11,7 @@ namespace ExpenseTracker.API.Controllers
 {
     using System.Text.RegularExpressions;
     using System.Web;
+    using System.Web.Http.Cors;
     using System.Web.Http.Results;
     using System.Web.Http.Routing;
 
@@ -21,6 +22,7 @@ namespace ExpenseTracker.API.Controllers
 
     using Newtonsoft.Json;
 
+    [EnableCors("*", "*", "*")]
     public class ExpenseGroupsController : ApiController
     {
         IExpenseTrackerRepository _repository;

@@ -10,12 +10,14 @@ using System.Web.Http;
 
 namespace ExpenseTracker.API.Controllers
 {
+    using System.Web.Http.Cors;
     using System.Web.Http.Routing;
 
     using ExpenseTracker.API.Helpers;
 
     using Newtonsoft.Json;
 
+    [EnableCors("*", "*", "*")]
     [RoutePrefix("api")]
     public class ExpensesController : ApiController
     {

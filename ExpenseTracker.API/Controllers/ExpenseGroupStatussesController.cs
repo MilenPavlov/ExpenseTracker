@@ -8,7 +8,10 @@ using System.Web.Http;
 
 namespace ExpenseTracker.API.Controllers
 {
-  //  [RoutePrefix("api/expensegroupstatusses")]
+    using System.Web.Http.Cors;
+
+    //  [RoutePrefix("api/expensegroupstatusses")]
+    [EnableCors("*", "*", "*")]
     public class ExpenseGroupStatussesController : ApiController
     {
         IExpenseTrackerRepository _repository;
